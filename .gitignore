@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# Build and cache
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Project outputs and large assets
+results/
+grass/
+
+# Optional local data artifacts
+data/*/video/
+data/*/summary/
+data/*/full_heavy/
+data/*/roi_heavy/

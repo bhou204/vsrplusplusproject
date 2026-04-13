@@ -1,0 +1,26 @@
+basicvsr_root: ../BasicVSR_PlusPlus
+basicvsr_config: ../BasicVSR_PlusPlus/configs/basicvsr_plusplus_reds4.py
+basicvsr_checkpoint: ../BasicVSR_PlusPlus/chkpts/basicvsr_plusplus_reds4.pth
+input_video_dir: data
+source_video_names:
+  - grass
+input_video_path: null
+input_frames_dir: null
+temp_dir: results/tmp
+output_dir: results/output
+video_output_dir: results/video
+summary_dir: results/summary
+upscale_factor: 4
+motion_threshold: 20.0
+min_roi_area: 400
+roi_expand_ratio: 0.15
+roi_smooth_window: 5
+use_mask: false
+use_bbox: true
+save_intermediate: true
+save_videos: true
+feather_blend: false
+window_size: 0
+max_seq_len: 8
+device: 0
+fps: 25.0
