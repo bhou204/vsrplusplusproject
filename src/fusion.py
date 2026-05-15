@@ -78,3 +78,105 @@ def paste_roi_sequence(
                 feather_sigma=feather_sigma,
             ))
     return fused_frames
+
+
+def pixel_uncertainty_fusion(
+    basicvsr_frame: np.ndarray,
+    texture_frame: np.ndarray,
+    uncertainty_map: np.ndarray,
+    clamp_output: bool = True,
+) -> np.ndarray:
+    """Fuse two frames using pixel-level uncertainty weighting.
+    
+    Final pixel = (1 - U) * basicvsr_frame + U * texture_frame
+    
+    where U is uncertainty map in [0, 1]:
+    - U ≈ 0: trust BasicVSR++ (conservative reconstruction)
+    - U ≈ 1: trust texture/generative branch (enhanced/hallucinated)
+    
+    Args:
+        basicvsr_frame: Conservative reconstruction frame (H, W, 3) uint8.
+        texture_frame: Texture-enhanced frame (H, W, 3) uint8, same shape as basicvsr_frame.
+        uncertainty_map: Uncertainty map (H, W) float32, values in [0, 1].
+        clamp_output: Whether to clamp output to [0, 255].
+    
+    Returns:
+        Fused frame (H, W, 3) uint8.
+    
+    Raises:
+        ValueError: If frame shapes don't match or uncertainty_map shape is incorrect.
+    """
+    if basicvsr_frame.shape != texture_frame.shape:
+        raise ValueError(
+            f"Frame shape mismatch: {basicvsr_frame.shape} vs {texture_frame.shape}"
+        )
+    
+    frame_height, frame_width = basicvsr_frame.shape[:2]
+    
+    if uncertainty_map.shape != (frame_height, frame_width):
+        # Try to resize uncertainty map
+        uncertainty_map = cv2.resize(
+            uncertainty_map, (frame_width, frame_height), interpolation=cv2.INTER_LINEAR
+        )
+    
+    # Ensure uncertainty is in [0, 1]
+    uncertainty_map = np.clip(uncertainty_map, 0.0, 1.0).astype(np.float32)
+    
+    # Expand to 3 channels
+    uncertainty_3ch = uncertainty_map[..., None].astype(np.float32)
+    
+    # Fuse: final = (1 - U) * basicvsr + U * texture
+    basicvsr_f = basicvsr_frame.astype(np.float32)
+    texture_f = texture_frame.astype(np.float32)
+    
+    fused = (1.0 - uncertainty_3ch) * basicvsr_f + uncertainty_3ch * texture_f
+    
+    if clamp_output:
+        fused = np.clip(fused, 0, 255)
+    
+    return fused.astype(np.uint8)
+
+
+def fuse_sequence_with_uncertainty(
+    basicvsr_frames: Sequence[np.ndarray],
+    texture_frames: Sequence[np.ndarray],
+    uncertainty_maps: Sequence[np.ndarray],
+    clamp_output: bool = True,
+) -> list[np.ndarray]:
+    """Fuse entire frame sequences using pixel-level uncertainty weighting.
+    
+    Args:
+        basicvsr_frames: Sequence of conservative reconstruction frames.
+        texture_frames: Sequence of texture-enhanced frames.
+        uncertainty_maps: Sequence of uncertainty maps, one per frame.
+        clamp_output: Whether to clamp output to [0, 255].
+    
+    Returns:
+        List of fused frames.
+    
+    Raises:
+        ValueError: If frame counts or shapes don't match.
+    """
+    if len(basicvsr_frames) != len(texture_frames):
+        raise ValueError(
+            f"Frame count mismatch: {len(basicvsr_frames)} vs {len(texture_frames)}"
+        )
+    
+    if len(basicvsr_frames) != len(uncertainty_maps):
+        raise ValueError(
+            f"Frame count mismatch: {len(basicvsr_frames)} vs {len(uncertainty_maps)}"
+        )
+    
+    fused_frames: list[np.ndarray] = []
+    for basicvsr_frame, texture_frame, uncertainty_map in zip(
+        basicvsr_frames, texture_frames, uncertainty_maps
+    ):
+        fused_frame = pixel_uncertainty_fusion(
+            basicvsr_frame=basicvsr_frame,
+            texture_frame=texture_frame,
+            uncertainty_map=uncertainty_map,
+            clamp_output=clamp_output,
+        )
+        fused_frames.append(fused_frame)
+    
+    return fused_frames
