@@ -24,3 +24,42 @@ window_size: 0
 max_seq_len: 8
 device: 0
 fps: 25.0
+
+# ==== Uncertainty-aware VSR settings ====
+uncertainty:
+  alpha: 1.0                           # Weight for temporal residual
+  beta: 0.8                            # Weight for texture complexity
+  gamma: 0.6                           # Weight for structure confidence
+  sigmoid_temperature: 1.0             # Temperature for sigmoid (lower = sharper)
+  spatial_smooth_ksize: 9              # Gaussian blur kernel for spatial smoothing (must be odd)
+  temporal_smooth_lambda: 0.7          # Exponential moving average weight [0, 1]
+  threshold: 0.5                       # Binary threshold for mask visualization
+  save_heatmap: true                   # Save uncertainty heatmaps
+  save_overlay: true                   # Save binary mask overlays
+
+# ==== Texture/generative branch settings ====
+texture_branch:
+  method: "realesrgan"                # Enhancement method: "realesrgan", "unsharp", "local_contrast", "hybrid"
+  sharpen_amount: 1.0                  # Sharpening strength for heuristic fallback methods
+  blur_ksize: 5                        # Kernel size for unsharp masking (must be odd)
+  realesrgan:
+    model_name: "RealESRGAN_x4plus"    # Default x4 model for VSR scale alignment
+    model_path: null                    # Local .pth path or URL; null means auto-download the default weight
+    scale: 4                            # Must match the VSR upscale factor
+    tile: 0                             # Tile size; 0 means full-frame inference
+    tile_pad: 10                        # Tile padding for tiled inference
+    pre_pad: 0                          # Extra padding before inference
+    half: true                          # Use FP16 on CUDA for speed/memory
+    dni_weight: null                    # Optional DNI weight for dual-model blending
+
+# ==== Pixel-level fusion settings ====
+fusion:
+  mode: "soft_uncertainty"             # "hard_bbox" (legacy) or "soft_uncertainty" (new)
+  clamp_output: true                   # Clamp output to [0, 255]
+
+# ==== Benchmark settings ====
+benchmark:
+  measure_time: true                   # Measure execution time
+  measure_gpu_memory: true             # Sample peak GPU memory (requires nvidia-smi)
+  output_json: true                    # Save benchmark results as JSON
+  output_csv: true                     # Save benchmark results as CSV
